@@ -1,0 +1,240 @@
+---
+title: "R Notebook"
+output: html_notebook
+---
+
+```{r}
+install.packages("rpart.plot")
+install.packages("party")
+```
+
+```{r}
+library("tidyverse")
+library("caTools")
+library("neuralnet")
+library("e1071")
+library("rpart")
+library("rpart.plot")
+library("party")
+library("kernlab")
+```
+
+```{r}
+HR <- read.csv("WA_Fn-UseC_-HR-Employee-Attrition.csv", stringsAsFactors = T)
+HR <- select(HR, -c("EmployeeCount", "Over18", "StandardHours", "EmployeeNumber"))
+head(HR)
+```
+
+```{r}
+
+set.seed(123)
+sample = sample.split(HR$Attrition, SplitRatio = .75)
+train = subset(HR, sample = TRUE)
+test = subset(HR, sample = FALSE)
+```
+
+```{r}
+# Naive Bayes
+nb_model <- naiveBayes(Attrition ~., data = train)
+nb_model
+
+nb_prediction <- predict(nb_model, test, type = "class")
+table(test$Attrition, nb_prediction, dnn = c("Actual", "Prediction"))
+data.frame(test, Prediction = nb_prediction)
+```
+
+```{r}
+HRNN <- select(HR, -c("Attrition", "BusinessTravel", "Department", "EducationField", "Gender", "JobRole", "MaritalStatus", "OverTime"))
+HRNN
+normalize <- function(x){
+  return((x - min(x))/ (max(x) - min(x)))
+}
+
+HR_norm <- as.data.frame(lapply(HRNN, normalize))
+head(HR_norm)
+```
+
+```{r}
+
+set.seed(123)
+sampleNN = sample.split(HR_norm$JobSatisfaction, SplitRatio = .75)
+trainNN = subset(HR_norm, sampleNN = TRUE)
+testNN = subset(HR_norm, sampleNN = FALSE)
+```
+
+```{r}
+# Neural Network
+HRNN_model <- neuralnet(formula = JobSatisfaction ~ Age + DailyRate +
+                          DistanceFromHome + Education + 
+                          + EnvironmentSatisfaction + HourlyRate +
+                          JobInvolvement + JobLevel + MonthlyIncome +
+                          MonthlyRate + NumCompaniesWorked +
+                          PercentSalaryHike + PerformanceRating + 
+                          RelationshipSatisfaction + StockOptionLevel + 
+                          TotalWorkingYears + TrainingTimesLastYear + 
+                          WorkLifeBalance + YearsAtCompany + YearsInCurrentRole + 
+                          YearsSinceLastPromotion + YearsWithCurrManager, 
+                        data = trainNN)
+plot(HRNN_model)
+```
+
+```{r}
+# Examine the correlation between predicted and actual values
+model_results <- compute(HRNN_model, testNN)
+
+predict_JobSatisfaction <- model_results$net.result
+
+cor(predict_JobSatisfaction, testNN$JobSatisfaction)
+```
+
+```{r}
+# Decision Tree
+cartTreeModel <- rpart(Attrition ~., data = train)
+rpart.plot(cartTreeModel, extra = 2, under = TRUE)
+
+pred.cart <- predict(cartTreeModel, newdata = test, type = "class")
+table(test$Attrition, pred.cart, dnn = c("Actual", "Prediction"))
+```
+
+```{r}
+# SVM
+# vanilladot
+ svmWithCost <- function(cost) {
+  set.seed(12345)
+  
+  svmodel <- ksvm(Attrition ~., 
+                data = train,
+                kernel = "vanilladot",
+                C = cost)
+  
+  pred <- predict(svmodel, test)
+  
+  confusionMatrix <- table(pred, 
+                           test$Attrition,
+                           dnn = c("Prediction", "Actual"))
+  accuracy <- sum(diag(confusionMatrix)) / sum(confusionMatrix)
+  
+  return(accuracy)
+ }
+  
+  cost_values <- c(1, seq(from = 5, to = 40, by = 5))
+  accuracy_values <- sapply(cost_values, svmWithCost)
+  CostAccuracyvanilladot <- data_frame(Cost = cost_values, Accuracy = accuracy_values, Kernels = "vanilladot")
+  CostAccuracyvanilladot
+
+```
+
+```{r}
+# SVM
+# rbfdot
+ svmWithCost <- function(cost) {
+  set.seed(12345)
+  
+  svmodel <- ksvm(Attrition ~., 
+                data = train,
+                kernel = "rbfdot",
+                C = cost)
+  
+  pred <- predict(svmodel, test)
+  
+  confusionMatrix <- table(pred, 
+                           test$Attrition,
+                           dnn = c("Prediction", "Actual"))
+  accuracy <- sum(diag(confusionMatrix)) / sum(confusionMatrix)
+  
+  return(accuracy)
+ }
+  
+  cost_values <- c(1, seq(from = 5, to = 40, by = 5))
+  accuracy_values <- sapply(cost_values, svmWithCost)
+  CostAccuracyrbfdot <- data_frame(Cost = cost_values, Accuracy = accuracy_values, Kernels = "rbfdot")
+  CostAccuracyrbfdot
+
+```
+
+```{r}
+# SVM
+# polydot
+ svmWithCost <- function(cost) {
+  set.seed(12345)
+  
+  svmodel <- ksvm(Attrition ~., 
+                data = train,
+                kernel = "polydot",
+                C = cost)
+  
+  pred <- predict(svmodel, test)
+  
+  confusionMatrix <- table(pred, 
+                           test$Attrition,
+                           dnn = c("Prediction", "Actual"))
+  accuracy <- sum(diag(confusionMatrix)) / sum(confusionMatrix)
+  
+  return(accuracy)
+ }
+  
+  cost_values <- c(1, seq(from = 5, to = 40, by = 5))
+  accuracy_values <- sapply(cost_values, svmWithCost)
+  CostAccuracypolydot <- data_frame(Cost = cost_values, Accuracy = accuracy_values, Kernels = "polydot")
+  CostAccuracypolydot
+
+```
+
+```{r}
+# SVM
+# tanhdot
+ svmWithCost4 <- function(cost) {
+  set.seed(12345)
+  
+  svmodel4 <- ksvm(Attrition ~., 
+                data = train,
+                kernel = "tanhdot",
+                C = cost)
+  
+  pred4 <- predict(svmodel4, test)
+  
+  confusionMatrix4 <- table(pred4, 
+                           test$Attrition,
+                           dnn = c("Prediction", "Actual"))
+  accuracy4 <- sum(diag(confusionMatrix4)) / sum(confusionMatrix4)
+  
+  return(accuracy4)
+ }
+  
+  cost_values4 <- c(1, seq(from = 5, to = 40, by = 5))
+  accuracy_values4 <- sapply(cost_values4, svmWithCost4)
+  CostAccuracytanhdot <- data_frame(Cost = cost_values, Accuracy = accuracy_values, Kernels = "tanhdot")
+  CostAccuracytanhdot
+
+```
+
+```{r}
+accuracys <- rbind(CostAccuracyvanilladot,CostAccuracyrbfdot)
+accuracys <- rbind(accuracys, CostAccuracypolydot)
+accuracys <- rbind(accuracys, CostAccuracytanhdot)
+accuracys
+```
+
+```{r}
+write.csv(accuracys, file = "accuracys.csv")
+```
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
